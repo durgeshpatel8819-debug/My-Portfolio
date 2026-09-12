@@ -127,7 +127,7 @@ if (projectsContainer) {
           ${project.techStack.map((t) => `<span>${t}</span>`).join("")}
         </div>
         <div class="card-actions">
-          <a href="${project.repoUrl}" target="_blank" rel="noopener noreferrer" class="link-btn">View Code on GitHub &rarr;</a>
+          <a href="${project.repoUrl}" target="_blank" rel="noopener noreferrer" class="link-btn">View Code on GitHub →</a>
           ${project.liveUrl ? `<a href="${project.liveUrl}" target="_blank" rel="noopener noreferrer" class="link-btn" style="margin-left: 1.2rem;">Live Demo ↗</a>` : ""}
         </div>
       </article>
@@ -184,6 +184,20 @@ if (contactForm) {
     const email = document.getElementById("email").value.trim();
     const message = document.getElementById("message").value.trim();
 
+    // Validation
+    if (!name || !email || !message) {
+      formStatus.textContent = "Please fill in all fields.";
+      formStatus.className = "form-status error";
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      formStatus.textContent = "Please enter a valid email address.";
+      formStatus.className = "form-status error";
+      return;
+    }
+
     submitBtn.disabled = true;
     submitBtn.textContent = "Sending...";
     formStatus.textContent = "";
@@ -228,7 +242,7 @@ if (contactForm) {
   });
 }
 
-// 9. Multi-Platform Real-Time Live DSA Tracker (LeetCode + GFG + CodeChef)
+// 9. FIXED: Multi-Platform Real-Time Live DSA Tracker
 async function fetchLiveDsaStats() {
   const totalElem = document.getElementById("totalDsaSolved");
   const lcElem = document.getElementById("lcCount");
@@ -237,133 +251,95 @@ async function fetchLiveDsaStats() {
 
   if (!totalElem) return;
 
-  // Exact verified baselines from your live accounts
+  // Default verified baselines
   let counts = {
-    leetcode: 3,     // Verified LeetCode count
-    gfg: 7,          // Verified GeeksforGeeks count
-    codechef: 250    // Verified CodeChef count
+    leetcode: 3,
+    gfg: 7,
+    codechef: 250
   };
 
-  // --- 1. Live LeetCode Fetch ---
+  // --- 1. FIXED: Live LeetCode Fetch ---
   const fetchLC = async () => {
-    // Primary endpoint: Heroku LeetCode stats
     try {
-      const res = await fetch("https://leetcode-stats-api.herokuapp.com/Durgeshpatel9297");
+      // RapidAPI LeetCode Stats (more reliable)
+      const res = await fetch("https://leetcode-api-fife.vercel.app/Durgeshpatel9297");
       if (res.ok) {
         const data = await res.json();
-        if (data.status === "success" && typeof data.totalSolved === "number" && data.totalSolved >= 3) {
+        if (data.totalSolved && data.totalSolved >= 3) {
           counts.leetcode = data.totalSolved;
+          console.log("✅ LeetCode fetched:", data.totalSolved);
           return;
         }
       }
-    } catch (_) {}
-
-    // Backup endpoint: Alfa LeetCode wrapper
-    try {
-      const res2 = await fetch("https://alfa-leetcode-api.onrender.com/userProfile/Durgeshpatel9297");
-      if (res2.ok) {
-        const data2 = await res2.json();
-        if (typeof data2.totalSolved === "number" && data2.totalSolved >= 3) {
-          counts.leetcode = data2.totalSolved;
-        }
-      }
-    } catch (_) {}
+    } catch (e) {
+      console.log("❌ LeetCode API failed:", e.message);
+    }
   };
 
-  // --- 2. Live GeeksforGeeks Fetch ---
+  // --- 2. FIXED: Live GeeksforGeeks Fetch ---
   const fetchGFG = async () => {
-    // Primary endpoint: GFG Stats API
     try {
-      const res = await fetch("https://geeks-for-geeks-stats-api.vercel.app/?userName=durgeshpas388");
+      // Direct API with proper headers
+      const res = await fetch("https://geeks-for-geeks-stats-api.vercel.app/?userName=durgeshpas388", {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+      });
+      
       if (res.ok) {
         const data = await res.json();
-        const solved = parseInt(data.totalProblemsSolved, 10);
-        if (!isNaN(solved) && solved >= 7) {
-          counts.gfg = solved;
-          return;
-        }
-      }
-    } catch (_) {}
-
-    // Backup endpoint: Render GFG API
-    try {
-      const res2 = await fetch("https://gfg-api-fefa.onrender.com/durgeshpas388");
-      if (res2.ok) {
-        const data2 = await res2.json();
-        const solved2 = parseInt(data2.problems_solved, 10);
-        if (!isNaN(solved2) && solved2 >= 7) {
-          counts.gfg = solved2;
-          return;
-        }
-      }
-    } catch (_) {}
-
-    // Secondary backup: Direct profile HTML parse via AllOrigins CORS
-    try {
-      const gfgTarget = encodeURIComponent("https://www.geeksforgeeks.org/profile/durgeshpas388");
-      const res3 = await fetch(`https://api.allorigins.win/get?url=${gfgTarget}`);
-      if (res3.ok) {
-        const data3 = await res3.json();
-        const match = data3.contents.match(/Problems Solved[\s\S]*?>\s*(\d+)\s*</i);
-        if (match && match[1]) {
-          const parsed = parseInt(match[1], 10);
-          if (parsed >= 7) counts.gfg = parsed;
-        }
-      }
-    } catch (_) {}
-  };
-
-  // --- 3. Live CodeChef Fetch ---
-  const fetchCC = async () => {
-    // Primary endpoint: CodeTabs CORS mirror
-    try {
-      const res = await fetch("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent("https://www.codechef.com/users/durgeshpatel92"));
-      if (res.ok) {
-        const html = await res.text();
-        const match = html.match(/Total Problems Solved:\s*(\d+)/i) ||
-                      html.match(/Problems Solved[\s\S]*?<strong>(\d+)<\/strong>/i) ||
-                      html.match(/problems-solved[\s\S]*?>\s*\(?(\d+)\)?/i);
-        if (match && match[1]) {
-          const parsed = parseInt(match[1], 10);
-          if (parsed >= 250) {
-            counts.codechef = parsed;
+        if (data.totalProblemsSolved) {
+          const solved = parseInt(data.totalProblemsSolved, 10);
+          if (!isNaN(solved) && solved >= 7) {
+            counts.gfg = solved;
+            console.log("✅ GFG fetched:", solved);
             return;
           }
         }
       }
-    } catch (_) {}
-
-    // Backup endpoint: AllOrigins CORS proxy
-    try {
-      const ccTarget = encodeURIComponent("https://www.codechef.com/users/durgeshpatel92");
-      const res2 = await fetch(`https://api.allorigins.win/get?url=${ccTarget}`);
-      if (res2.ok) {
-        const data2 = await res2.json();
-        const match2 = data2.contents.match(/Total Problems Solved:\s*(\d+)/i) ||
-                       data2.contents.match(/Problems Solved[\s\S]*?<strong>(\d+)<\/strong>/i) ||
-                       data2.contents.match(/problems-solved[\s\S]*?>\s*\(?(\d+)\)?/i);
-        if (match2 && match2[1]) {
-          const parsed2 = parseInt(match2[1], 10);
-          if (parsed2 >= 250) counts.codechef = parsed2;
-        }
-      }
-    } catch (_) {}
+    } catch (e) {
+      console.log("❌ GFG API failed:", e.message);
+    }
   };
 
-  // Run all 3 concurrent fetches with a max 4-second timeout
+  // --- 3. FIXED: Live CodeChef Fetch ---
+  const fetchCC = async () => {
+    try {
+      // Using public CodeChef stats API
+      const res = await fetch("https://codechef-api.vercel.app/handle/durgeshpatel92");
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.problemsSolved && data.problemsSolved >= 250) {
+          counts.codechef = data.problemsSolved;
+          console.log("✅ CodeChef fetched:", data.problemsSolved);
+          return;
+        }
+      }
+    } catch (e) {
+      console.log("❌ CodeChef API failed:", e.message);
+    }
+
+    // Fallback: Static value (you can manually update this)
+    console.log("⚠️ Using fallback CodeChef value: 250");
+  };
+
+  // Run all fetches with timeout
   await Promise.race([
     Promise.allSettled([fetchLC(), fetchGFG(), fetchCC()]),
-    new Promise((resolve) => setTimeout(resolve, 4000))
+    new Promise((resolve) => setTimeout(resolve, 5000))
   ]);
 
-  // Update UI badges
+  // Update UI
   if (lcElem) lcElem.textContent = counts.leetcode;
   if (gfgElem) gfgElem.textContent = counts.gfg;
   if (ccElem) ccElem.textContent = counts.codechef;
 
-  // Calculate grand total (3 + 7 + 250 = 260+)
+  // Animate total
   const grandTotal = counts.leetcode + counts.gfg + counts.codechef;
   animateCounter(totalElem, grandTotal);
+  
+  console.log("📊 Final DSA Stats:", { leetcode: counts.leetcode, gfg: counts.gfg, codechef: counts.codechef, total: grandTotal });
 }
 
 function animateCounter(element, target) {
@@ -384,4 +360,14 @@ function animateCounter(element, target) {
   }, stepTime);
 }
 
-document.addEventListener("DOMContentLoaded", fetchLiveDsaStats);
+// Start fetching when DOM is ready
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("🚀 Starting DSA Tracker...");
+  fetchLiveDsaStats();
+});
+
+// Optional: Refresh every 5 minutes
+setInterval(() => {
+  console.log("🔄 Refreshing DSA Stats...");
+  fetchLiveDsaStats();
+}, 5 * 60 * 1000);
